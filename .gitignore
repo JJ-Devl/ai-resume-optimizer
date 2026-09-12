@@ -1,0 +1,31 @@
+# Dependencies and builds
+node_modules/
+.next/
+out/
+build/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Secrets: commit only the empty example
+.env*
+!.env.example
+*.pem
+*.key
+*.p12
+
+# Private documents and working data (at any depth)
+uploads/
+generated/
+temp/
+tmp/
+*.pdf
+*.docx
+*.doc
+*.sqlite*
+*.log
+
+# Local tooling and operating system files
+.vercel/
+.DS_Store
+Thumbs.db
