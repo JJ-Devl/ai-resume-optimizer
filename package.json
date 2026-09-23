@@ -3,11 +3,22 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "concurrently -k -n web,api \"npm:dev:web\" \"npm:dev:api\"",
+    "build": "npm run build --workspace backend && next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit && npm run typecheck --workspace backend",
+    "dev:web": "next dev --hostname 127.0.0.1",
+    "dev:api": "npm run dev --workspace backend",
+    "start:api": "npm run start --workspace backend",
+    "test": "npm run test --workspace backend",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "prisma:generate": "npm run prisma:generate --workspace backend --",
+    "db:setup": "npm run db:setup --workspace backend --",
+    "db:migrate": "npm run db:migrate --workspace backend --",
+    "db:deploy": "npm run db:deploy --workspace backend --",
+    "db:studio": "npm run db:studio --workspace backend --"
   },
   "dependencies": {
     "next": "16.3.5",
@@ -15,14 +26,27 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
-    "@types/node": "^20",
+    "@types/node": "^24.13.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^10.0.5",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
+    "prettier": "^3.9.8",
     "typescript": "^5"
   },
   "engines": {
     "node": ">=24 <25"
+  },
+  "workspaces": [
+    "backend"
+  ],
+  "overrides": {
+    "prisma": {
+      "mysql2": "^3.24.4"
+    },
+    "@prisma/config": {
+      "deepmerge-ts": "^8.0.2"
+    }
   }
 }

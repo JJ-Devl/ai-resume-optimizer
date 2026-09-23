@@ -1,0 +1,19 @@
+# Local development only. These are demo credentials, not production secrets.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: resume
+      POSTGRES_PASSWORD: resume_local_only
+      POSTGRES_DB: resume_optimizer
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U resume -d resume_optimizer"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+volumes:
+  postgres_data:

@@ -1,10 +1,10 @@
 # AI service boundary
 
-Milestone 2 will add a server-only optimization service here. Import `server-only`
-in modules that read credentials. Validate inputs on the server, call the AI
-provider there, and validate structured responses before rendering documents.
-Never import a credential-bearing module into client components.
+The next milestone will add AI integration inside backend/src/ai/, as a NestJS
+service injected into GenerationsService. Keep provider keys and calls in the
+backend. This frontend directory is reserved for UI-facing AI helpers only.
 
-Keep resume facts grounded in the supplied document; do not invent qualifications.
-Treat resume text and job descriptions as untrusted data. Document layout
-belongs to document templates, not to model-generated HTML or code.
+Validate inputs server-side and validate structured AI responses before rendering
+documents. Keep resume facts grounded in the supplied document; do not invent
+qualifications. Treat resume and job description text as untrusted data.
+Document layout belongs to templates, not model-generated HTML or code.
