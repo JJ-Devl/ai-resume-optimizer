@@ -1,0 +1,31 @@
+FROM node:24-bookworm-slim AS base
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+
+FROM base AS build
+COPY package.json package-lock.json ./
+COPY backend/package.json ./backend/package.json
+RUN npm ci
+COPY backend ./backend
+RUN npm run build --workspace backend
+
+# Optional one-off migration image; never runs migrations during image builds.
+FROM build AS migrate
+ENV NODE_ENV=production
+USER node
+CMD ["npm", "run", "db:deploy", "--workspace", "backend"]
+
+FROM base AS dependencies
+COPY package.json package-lock.json ./
+COPY backend/package.json ./backend/package.json
+RUN npm ci --omit=dev --workspace backend --include-workspace-root=false
+
+FROM base AS runtime
+ENV NODE_ENV=production API_HOST=0.0.0.0 API_PORT=3001
+COPY --from=dependencies --chown=node:node /app/node_modules ./node_modules
+COPY --from=dependencies --chown=node:node /app/backend ./backend
+COPY --from=build --chown=node:node /app/backend/dist ./backend/dist
+WORKDIR /app/backend
+USER node
+EXPOSE 3001
+CMD ["node", "dist/main.js"]

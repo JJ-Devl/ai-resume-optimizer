@@ -7,6 +7,9 @@ async function bootstrap() {
   if (existsSync(".env")) loadEnvFile(".env");
   const app = await createApp();
   app.enableShutdownHooks();
-  await app.listen(Number(process.env.API_PORT ?? 3001), "127.0.0.1");
+  await app.listen(
+    Number(process.env.API_PORT ?? 3001),
+    process.env.API_HOST ?? "127.0.0.1",
+  );
 }
 void bootstrap();

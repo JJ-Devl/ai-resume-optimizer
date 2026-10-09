@@ -34,3 +34,57 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  images:
+    name: Build Docker images
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set image names
+        shell: bash
+        run: |
+          echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      # Build all images before publishing any of them. PRs stop after this step.
+      - name: Build web, API, and migration images
+        shell: bash
+        run: |
+          docker build --platform linux/amd64 -f Dockerfile.web \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            -t "$IMAGE_PREFIX-web:sha-$GITHUB_SHA" .
+          docker build --platform linux/amd64 -f Dockerfile.api \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            -t "$IMAGE_PREFIX-api:sha-$GITHUB_SHA" .
+          docker build --platform linux/amd64 -f Dockerfile.api --target migrate \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            -t "$IMAGE_PREFIX-migrate:sha-$GITHUB_SHA" .
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+      - name: Publish images for this commit
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          for component in web api migrate; do
+            docker push "$IMAGE_PREFIX-$component:sha-$GITHUB_SHA"
+          done
+
+      - name: Log out of registry
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: docker logout ghcr.io

@@ -1,0 +1,62 @@
+# Local image verification only. Do not use these demo credentials on AWS.
+name: resume-optimizer-image-test
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    # Windows database viewers can connect here; accessible only from this computer.
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_USER: resume
+      POSTGRES_PASSWORD: image_test_only
+      POSTGRES_DB: resume_optimizer
+    volumes:
+      - image_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U resume -d resume_optimizer"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  migrate:
+    image: resume-optimizer-migrate:local
+    pull_policy: never
+    environment:
+      DATABASE_URL: postgresql://resume:image_test_only@postgres:5432/resume_optimizer
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    image: resume-optimizer-api:local
+    pull_policy: never
+    environment:
+      DATABASE_URL: postgresql://resume:image_test_only@postgres:5432/resume_optimizer
+      NODE_ENV: production
+      API_HOST: 0.0.0.0
+      API_PORT: "3001"
+      SEED_DEMO: "false"
+      MOCK_SCENARIOS: "false"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      start_period: 15s
+      retries: 12
+
+  web:
+    image: resume-optimizer-web:local
+    pull_policy: never
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  image_test_data:
