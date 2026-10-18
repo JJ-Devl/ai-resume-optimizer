@@ -1,4 +1,4 @@
-/** Browser-side input; the file bytes are not sent in this mock milestone. */
+/** Browser-side input; resume bytes are uploaded for extraction. */
 export interface OptimizationInput {
   resume: File;
   jobDescription: string;
@@ -34,4 +34,5 @@ export interface GenerationResponse {
 export interface ParsedResume {
   text: string;
   originalFilename: string;
+  format: "pdf" | "docx";
 }

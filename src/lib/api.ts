@@ -16,7 +16,10 @@ export async function apiRequest<T>(
   options?: RequestInit,
 ): Promise<T> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8000);
+  const timer = setTimeout(
+    () => controller.abort(),
+    path === "documents/preview" ? 30000 : 8000,
+  );
   try {
     const response = await fetch(`/api/${path}`, {
       ...options,
@@ -42,7 +45,9 @@ export async function apiRequest<T>(
     if (error instanceof ApiError) throw error;
     if (controller.signal.aborted)
       throw new ApiError(
-        "The request took too long. Check History before retrying in case it was saved.",
+        path === "documents/preview"
+          ? "Reading the resume took too long. Try again with a simpler document."
+          : "The request took too long. Check History before retrying in case it was saved.",
         "CLIENT_TIMEOUT",
       );
     throw new ApiError(

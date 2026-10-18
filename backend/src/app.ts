@@ -5,10 +5,12 @@ import { ApiExceptionFilter } from "./common/api-exception.filter";
 import { DatabaseService } from "./database/database.service";
 import { GenerationsController } from "./generations/generations.controller";
 import { GenerationsService } from "./generations/generations.service";
+import { DocumentsController } from "./documents/documents.controller";
+import { DocumentsService } from "./documents/documents.service";
 
 @Module({
-  controllers: [GenerationsController],
-  providers: [DatabaseService, GenerationsService],
+  controllers: [GenerationsController, DocumentsController],
+  providers: [DatabaseService, GenerationsService, DocumentsService],
 })
 class AppModule {}
 

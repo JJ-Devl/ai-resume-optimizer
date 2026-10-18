@@ -4,13 +4,19 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { RESUME_ACCEPT, validateResume } from "@/lib/documents/validation";
 import { apiRequest, getCapabilities } from "@/lib/api";
-import type { GenerationResponse, MockScenario } from "@/types/optimization";
+import type {
+  GenerationResponse,
+  MockScenario,
+  ParsedResume,
+} from "@/types/optimization";
+import { ResumePreview } from "./resume-preview";
 
 export function OptimizerForm() {
   const [resume, setResume] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GenerationResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState<ParsedResume | null>(null);
   const submitting = useRef(false);
   const [simulations, setSimulations] = useState(false);
 
@@ -30,6 +36,7 @@ export function OptimizerForm() {
     event.preventDefault();
     if (submitting.current) return;
     setResult(null);
+    setPreview(null);
     setError(null);
     const fileError = validateResume(resume);
     if (fileError || !resume) {
@@ -56,6 +63,13 @@ export function OptimizerForm() {
     submitting.current = true;
     setLoading(true);
     try {
+      const upload = new FormData();
+      upload.append("resume", resume);
+      const extracted = await apiRequest<ParsedResume>("documents/preview", {
+        method: "POST",
+        body: upload,
+      });
+      setPreview(extracted);
       const response = await apiRequest<GenerationResponse>("generations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -95,6 +109,7 @@ export function OptimizerForm() {
         className="form-fields"
         onChange={() => {
           setResult(null);
+          setPreview(null);
           setError(null);
         }}
       >
@@ -110,7 +125,7 @@ export function OptimizerForm() {
               {resume ? resume.name : "A good starting point: your experience"}
             </strong>
             <p id="resume-help">
-              PDF or DOCX · Up to 5 MB · File contents stay in your browser
+              Text-based PDF or DOCX · Up to 5 MB · Uploaded for text preview
             </p>
             <input
               id="resume"
@@ -202,14 +217,15 @@ export function OptimizerForm() {
           <Link href="/history">View history →</Link>
         </div>
       )}
+      {preview && <ResumePreview resume={preview} />}
       <button className="generate" type="submit" disabled={loading}>
-        {loading ? "Generating mock result…" : "Generate"}{" "}
+        {loading ? "Reading resume and saving mock result…" : "Generate"}{" "}
         <span aria-hidden="true">↗</span>
       </button>
       <p className="preview-note" role="status">
         {loading
           ? "Waiting for the backend…"
-          : "Mock mode · No AI content or document exports yet"}
+          : "Text preview + mock history · No AI content or document exports yet"}
       </p>
     </form>
   );

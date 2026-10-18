@@ -564,3 +564,20 @@ button:disabled {
     gap: 7px;
   }
 }
+.resume-preview {
+  margin-block: 1.5rem;
+  min-width: 0;
+}
+.resume-preview pre {
+  max-height: 28rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  font: inherit;
+  line-height: 1.6;
+  background: #f8fafc;
+  color: #17202a;
+}
