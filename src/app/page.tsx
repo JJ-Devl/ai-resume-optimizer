@@ -46,20 +46,21 @@ export default function Home() {
               <li>
                 <span>03</span>
                 <div>
-                  <h3>Try the full flow</h3>
+                  <h3>Check your resume text</h3>
                   <p>
-                    Send a mock request and find your saved result in History.
-                    AI and exports come next.
+                    Preview the extracted text and find your mock record in
+                    History. AI optimization and exports come later.
                   </p>
                 </div>
               </li>
             </ol>
             <div className="privacy">
-              <strong>A local mock workspace.</strong>
+              <strong>Text preview, with mock history.</strong>
               <p>
-                File contents stay in your browser. Form text and file metadata
-                go to the backend; only the company, role, filename, and result
-                metadata are saved. No AI is connected.
+                Your resume is uploaded to the backend for text extraction in
+                memory. The file and extracted text are not saved. Only company,
+                role, filename, and mock result metadata are saved in History.
+                No AI is connected.
               </p>
             </div>
           </aside>
@@ -67,7 +68,7 @@ export default function Home() {
       </main>
       <footer>
         <span>Thoughtful applications start here.</span>
-        <span>Milestone 02 · Mock API & history</span>
+        <span>Milestone 1 · Resume text preview</span>
       </footer>
     </div>
   );

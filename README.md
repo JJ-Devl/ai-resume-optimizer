@@ -2,8 +2,8 @@
 
 A Next.js + TypeScript frontend with a NestJS API and a PostgreSQL history
 database. This milestone demonstrates a real request/response and persistence
-flow using mock generation. No authentication, AI calls, resume parsing, or
-document exports are implemented.
+flow using mock generation. Milestone 1 adds real PDF/DOCX text extraction and a
+browser preview. Authentication, AI calls, OCR, and document exports are not implemented.
 
 ## Run locally
 
@@ -60,13 +60,14 @@ Role: Frontend Engineer
 Build accessible React applications with TypeScript.
 ```
 
-3. Click Generate. A real request goes to NestJS; success saves a mock record.
+3. Click Generate. The resume is uploaded and previewed, then a mock history record is saved.
 4. Follow View history. Refresh or restart the server to verify persistence.
 5. Expand Test a backend response to select a failure, then click Generate.
    Inputs remain available to retry. Failed simulations do not save records.
 
 The frontend prevents duplicate in-flight submissions and uses an 8-second
-timeout. Each new successful submission creates a separate record. If the
+timeout for mock requests and 30 seconds for preview uploads. Each new successful
+submission creates a separate record. If the
 connection fails after a real successful write, inspect History before retrying.
 
 ### Error scenarios
@@ -80,7 +81,7 @@ connection fails after a real successful write, inspect History before retrying.
 - Slow connection: the server waits 12 seconds, then fails without writing;
   the browser times out after 8 seconds.
 
-These are deliberate simulations, not real parsing failures or rate limiting.
+These scenario controls are simulations. The upload endpoint also returns real validation and extraction errors.
 To test a real unavailable backend, run only npm run dev:web while the API is
 stopped. Generate and History show connection errors. Start npm run dev:api and
 retry; reload Create to discover the available simulation controls.
@@ -93,6 +94,7 @@ All endpoints are prefixed with /api:
 - GET /capabilities: mock mode and whether error simulations are enabled.
 - GET /generations: latest 50 records, newest first.
 - POST /generations: validate JSON, simulate an outcome, and save on success.
+- POST /documents/preview: validate one multipart resume upload and return extracted text without saving the file or text.
 
 Example JSON:
 
@@ -110,8 +112,10 @@ characters. Job descriptions are limited to 30,000 characters. Unknown fields,
 unknown scenarios, missing required data, and invalid types return HTTP 400.
 Errors use { "statusCode": 400, "error": { "code": "...", "message": "..." } }.
 
-The selected file's bytes are NOT uploaded. The API receives only its filename
-and size plus form text. It checks metadata, not file authenticity.
+The browser uploads the actual resume to POST /api/documents/preview as multipart
+FormData with one resume file and no other fields. The response is
+{ text, originalFilename, format }. The browser then sends metadata and form text
+to the existing mock endpoint. A preview remains visible if saving history fails.
 Only company, role, filename, ID, timestamp, source, and mock status are persisted.
 Job description, URL, custom prompt, and resume contents are not stored.
 Explicit Company: and Role: / Job title: lines supply labels; otherwise labels
@@ -221,3 +225,5 @@ excludes databases, secrets, private documents, generated output, and dependenci
 References: [NestJS validation](https://docs.nestjs.com/techniques/validation),
 [exception filters](https://docs.nestjs.com/exception-filters),
 [Prisma with NestJS](https://docs.nestjs.com/recipes/prisma).
+
+See src/lib/documents/README.md for upload limits, extraction behavior, and tests.

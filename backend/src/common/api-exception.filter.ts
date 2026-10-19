@@ -16,10 +16,14 @@ export class ApiExceptionFilter implements ExceptionFilter {
       exception instanceof HttpException ? exception.getResponse() : null;
     let message = "Something went wrong on the server. Please try again.";
     let code = status === 400 ? "INVALID_INPUT" : "SERVER_ERROR";
+    if (status === 413) {
+      code = "FILE_TOO_LARGE";
+      message = "Your resume must be 5 MB or smaller.";
+    }
     if (typeof body === "string") message = body;
     if (body && typeof body === "object") {
       const detail = body as { message?: string | string[]; code?: string };
-      if (detail.message)
+      if (detail.message && status !== 413)
         message = Array.isArray(detail.message)
           ? detail.message.join(" ")
           : detail.message;
