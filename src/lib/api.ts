@@ -1,4 +1,9 @@
-import type { Generation, MockScenario } from "@/types/optimization";
+import type {
+  Generation,
+  MockScenario,
+  ApplicationSummary,
+  SavedApplication,
+} from "@/types/optimization";
 
 export class ApiError extends Error {
   constructor(
@@ -18,7 +23,11 @@ export async function apiRequest<T>(
   const controller = new AbortController();
   const timer = setTimeout(
     () => controller.abort(),
-    path === "documents/preview" ? 30000 : 8000,
+    path === "optimizations" || path.endsWith("/documents")
+      ? 120000
+      : path === "documents/preview"
+        ? 30000
+        : 8000,
   );
   try {
     const response = await fetch(`/api/${path}`, {
@@ -47,7 +56,9 @@ export async function apiRequest<T>(
       throw new ApiError(
         path === "documents/preview"
           ? "Reading the resume took too long. Try again with a simpler document."
-          : "The request took too long. Check History before retrying in case it was saved.",
+          : path === "optimizations"
+            ? "Optimization took too long. Check History before retrying; it may have been saved. API charges may still apply, and retrying starts a new request."
+            : "The request took too long. Check History before retrying in case it was saved.",
         "CLIENT_TIMEOUT",
       );
     throw new ApiError(
@@ -68,4 +79,33 @@ export function getCapabilities() {
     simulationsEnabled: boolean;
     scenarios: MockScenario[];
   }>("capabilities");
+}
+
+export function getApplications() {
+  return apiRequest<{ items: ApplicationSummary[]; limit: number }>(
+    "optimizations",
+  );
+}
+export function getApplication(id: string) {
+  return apiRequest<SavedApplication>(
+    "optimizations/" + encodeURIComponent(id),
+  );
+}
+
+export function generateDocuments(id: string) {
+  return apiRequest<SavedApplication>(
+    "optimizations/" + encodeURIComponent(id) + "/documents",
+    { method: "POST" },
+  );
+}
+export function getDocumentDownload(id: string, format: "docx" | "pdf") {
+  return apiRequest<{ url: string; expiresAt: string }>(
+    "optimizations/" + encodeURIComponent(id) + "/documents/" + format,
+  );
+}
+export function deleteApplication(id: string) {
+  return apiRequest<{ deleted: boolean }>(
+    "optimizations/" + encodeURIComponent(id),
+    { method: "DELETE" },
+  );
 }

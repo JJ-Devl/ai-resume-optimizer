@@ -89,9 +89,7 @@ export function HistoryList() {
           ))}
         </ul>
       )}
-      <p className="hint">
-        Latest 50 records · Demo companies are fictional · No AI generation yet
-      </p>
+      <p className="hint">Latest 50 development mock records</p>
     </section>
   );
 }

@@ -18,7 +18,12 @@
     "db:setup": "npm run db:setup --workspace backend --",
     "db:migrate": "npm run db:migrate --workspace backend --",
     "db:deploy": "npm run db:deploy --workspace backend --",
-    "db:studio": "npm run db:studio --workspace backend --"
+    "db:studio": "npm run db:studio --workspace backend --",
+    "storage:setup": "node backend/scripts/storage-setup.cjs",
+    "storage:up": "npm run storage:setup && docker compose --profile storage up -d --wait garage",
+    "storage:stop": "docker compose --profile storage stop garage",
+    "storage:test": "node backend/scripts/storage-smoke.cjs",
+    "exports:test": "npm run build --workspace backend && npm run exports:smoke --workspace backend"
   },
   "dependencies": {
     "next": "16.3.5",

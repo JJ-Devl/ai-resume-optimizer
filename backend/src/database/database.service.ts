@@ -1,3 +1,6 @@
+import type { OptimizationDto } from "../ai/optimization.dto";
+import type { OptimizedResume } from "../ai/resume.schema";
+import type { Prisma } from "../generated/prisma/client";
 import { Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { PrismaPg } from "@prisma/adapter-pg";
 import {
@@ -34,7 +37,7 @@ function serialize(row: StoredGeneration): Generation {
 
 @Injectable()
 export class DatabaseService implements OnModuleInit, OnModuleDestroy {
-  private readonly prisma: PrismaClient;
+  readonly prisma: PrismaClient;
 
   constructor() {
     const { url, schema } = databaseConnection();
@@ -115,7 +118,116 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     return serialize(row);
   }
 
+  async checkApplicationStorage() {
+    // Fail before a paid call if PostgreSQL or the required migration is unavailable.
+    await this.prisma.application.findFirst({ select: { id: true } });
+  }
+
+  async saveApplication(
+    original: {
+      text: string;
+      originalFilename: string;
+      format: "pdf" | "docx";
+    },
+    input: OptimizationDto,
+    optimized: OptimizedResume & {
+      model: string;
+      usage: {
+        inputTokens: number;
+        outputTokens: number;
+        reasoningTokens: number;
+      };
+    },
+  ) {
+    const label = (pattern: RegExp, fallback: string) =>
+      input.jobDescription.match(pattern)?.[1].trim().slice(0, 160) || fallback;
+    const row = await this.prisma.application.create({
+      data: {
+        companyName: label(/^Company:[ \t]*(.+)$/im, "Company not specified"),
+        jobTitle: label(
+          /^(?:Role|Job title):[ \t]*(.+)$/im,
+          "Role not specified",
+        ),
+        resumeFilename: original.originalFilename,
+        resumeFormat: original.format,
+        originalText: original.text,
+        jobDescription: input.jobDescription,
+        jobUrl: input.jobUrl || null,
+        resume: optimized.resume as Prisma.InputJsonValue,
+        resumeText: optimized.resumeText,
+        changes: optimized.changes,
+        skillsAdded: optimized.skillsAdded,
+        model: optimized.model,
+        ...optimized.usage,
+      },
+      select: applicationSummarySelect,
+    });
+    return { ...row, createdAt: row.createdAt.toISOString() };
+  }
+
+  async listApplications() {
+    const rows = await this.prisma.application.findMany({
+      select: applicationSummarySelect,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: 50,
+    });
+    return rows.map((row) => ({
+      ...row,
+      createdAt: row.createdAt.toISOString(),
+    }));
+  }
+
+  async getApplication(id: string) {
+    const row = await this.prisma.application.findUnique({ where: { id } });
+    if (!row) return null;
+    return {
+      id: row.id,
+      createdAt: row.createdAt.toISOString(),
+      companyName: row.companyName,
+      jobTitle: row.jobTitle,
+      resumeFilename: row.resumeFilename,
+      schemaVersion: row.schemaVersion,
+      documentStatus: row.documentStatus,
+      documents: {
+        status: row.documentStatus,
+        error: row.documentError,
+        generatedAt: row.documentsGeneratedAt?.toISOString() ?? null,
+        templateVersion: row.templateVersion,
+      },
+      jobDescription: row.jobDescription,
+      jobUrl: row.jobUrl,
+      original: {
+        text: row.originalText,
+        originalFilename: row.resumeFilename,
+        format: row.resumeFormat,
+      },
+      optimized: {
+        resume: row.resume,
+        resumeText: row.resumeText,
+        changes: row.changes,
+        skillsAdded: row.skillsAdded,
+        model: row.model,
+        usage: {
+          inputTokens: row.inputTokens,
+          outputTokens: row.outputTokens,
+          reasoningTokens: row.reasoningTokens,
+        },
+      },
+    };
+  }
+
   async onModuleDestroy() {
     await this.prisma.$disconnect();
   }
 }
+
+const applicationSummarySelect = {
+  id: true,
+  createdAt: true,
+  companyName: true,
+  jobTitle: true,
+  resumeFilename: true,
+  model: true,
+  schemaVersion: true,
+  documentStatus: true,
+} as const;

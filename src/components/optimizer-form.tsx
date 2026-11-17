@@ -10,6 +10,8 @@ import type {
   ParsedResume,
 } from "@/types/optimization";
 import { ResumePreview } from "./resume-preview";
+import { OptimizationPreview } from "./optimization-preview";
+import type { OptimizationResponse } from "@/types/optimization";
 
 export function OptimizerForm() {
   const [resume, setResume] = useState<File | null>(null);
@@ -17,6 +19,14 @@ export function OptimizerForm() {
   const [result, setResult] = useState<GenerationResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<ParsedResume | null>(null);
+  const [optimized, setOptimized] = useState<
+    OptimizationResponse["optimized"] | null
+  >(null);
+  const [stage, setStage] = useState("");
+  const [saveStatus, setSaveStatus] = useState<{
+    id: string | null;
+    error: string | null;
+  } | null>(null);
   const submitting = useRef(false);
   const [simulations, setSimulations] = useState(false);
 
@@ -36,6 +46,8 @@ export function OptimizerForm() {
     event.preventDefault();
     if (submitting.current) return;
     setResult(null);
+    setOptimized(null);
+    setSaveStatus(null);
     setPreview(null);
     setError(null);
     const fileError = validateResume(resume);
@@ -62,14 +74,41 @@ export function OptimizerForm() {
     }
     submitting.current = true;
     setLoading(true);
+    setStage("Processing your resume…");
     try {
       const upload = new FormData();
       upload.append("resume", resume);
+      const scenario = simulations
+        ? String(data.get("scenario") ?? "astra")
+        : "astra";
+      if (scenario === "astra") {
+        upload.append("jobDescription", jobDescription);
+        if (jobUrl) upload.append("jobUrl", jobUrl);
+        const customPrompt = String(data.get("customPrompt") ?? "").trim();
+        if (customPrompt) upload.append("customPrompt", customPrompt);
+        setStage("Astra is tailoring your resume…");
+        const response = await apiRequest<OptimizationResponse>(
+          "optimizations",
+          {
+            method: "POST",
+            body: upload,
+          },
+        );
+        setPreview(response.original);
+        setOptimized(response.optimized);
+        setSaveStatus({
+          id: response.application?.id ?? null,
+          error: response.saveError,
+        });
+        return;
+      }
+      setStage("Reading your resume…");
       const extracted = await apiRequest<ParsedResume>("documents/preview", {
         method: "POST",
         body: upload,
       });
       setPreview(extracted);
+      setStage("Testing the mock response…");
       const response = await apiRequest<GenerationResponse>("generations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -109,12 +148,12 @@ export function OptimizerForm() {
         className="form-fields"
         onChange={() => {
           setResult(null);
+          setOptimized(null);
           setPreview(null);
           setError(null);
         }}
       >
-        <div className="field">
-          <label htmlFor="resume">
+        <section className="form-step"><h3><span>01</span> Your experience</h3><div className="field"><label htmlFor="resume">
             Your resume <span>*</span>
           </label>
           <div className="upload">
@@ -140,8 +179,7 @@ export function OptimizerForm() {
             />
           </div>
         </div>
-        <div className="field">
-          <label htmlFor="jobDescription">
+        </section><section className="form-step"><h3><span>02</span> The opportunity</h3><div className="field"><label htmlFor="jobDescription">
             Job description <span>*</span>
           </label>
           <textarea
@@ -155,8 +193,8 @@ export function OptimizerForm() {
             }
           />
           <p className="hint">
-            In this mock, use “Company:” and “Role:” lines to label your history
-            record. Otherwise, the labels are “not specified.”
+            Include the responsibilities and qualifications you want your resume
+            to address.
           </p>
         </div>
         <div className="field">
@@ -172,23 +210,29 @@ export function OptimizerForm() {
           />
           <p className="hint">For reference only. Links are not fetched.</p>
         </div>
-        <div className="field">
-          <label htmlFor="customPrompt">
-            Anything to focus on? <small>Optional</small>
+        </section><section className="form-step"><h3><span>03</span> Make it yours</h3><div className="field"><label htmlFor="customPrompt">
+            Your rules and writing preferences <small>Optional</small>
           </label>
           <textarea
             id="customPrompt"
             name="customPrompt"
             maxLength={5000}
             rows={3}
-            placeholder="e.g. Emphasize my leadership experience and keep the tone concise."
+            placeholder="e.g. Use British English, emphasize leadership, and keep the summary concise."
           />
         </div>
-        {simulations && (
+        <p className="hint">
+          These instructions apply to this application and are sent with your
+          resume and job description.
+        </p>
+        </section>{simulations && (
           <details className="demo-controls">
             <summary>Test a backend response</summary>
             <label htmlFor="scenario">Response scenario</label>
-            <select id="scenario" name="scenario" defaultValue="success">
+            <select id="scenario" name="scenario" defaultValue="astra">
+              <option value="astra">
+                Astra — optimize resume (paid API call)
+              </option>
               <option value="success">Success — save a mock record</option>
               <option value="validation">Resume rejected (422)</option>
               <option value="rate-limit">Too many requests (429)</option>
@@ -198,7 +242,7 @@ export function OptimizerForm() {
               <option value="slow">Slow connection — browser timeout</option>
             </select>
             <p className="hint">
-              These responses come from NestJS. Simulated failures do not save a
+              Mock options do not call AI. Simulated failures do not save a
               record.
             </p>
           </details>
@@ -217,15 +261,28 @@ export function OptimizerForm() {
           <Link href="/history">View history →</Link>
         </div>
       )}
+      {optimized && (
+        <OptimizationPreview
+          result={optimized}
+          saved={Boolean(saveStatus?.id)}
+        />
+      )}
+      {saveStatus?.id && (
+        <Link href={"/history/" + saveStatus.id}>Open saved application →</Link>
+      )}
+      {saveStatus?.error && (
+        <div className="message error" role="alert">
+          <p>{saveStatus.error}</p>
+        </div>
+      )}
       {preview && <ResumePreview resume={preview} />}
       <button className="generate" type="submit" disabled={loading}>
-        {loading ? "Reading resume and saving mock result…" : "Generate"}{" "}
-        <span aria-hidden="true">↗</span>
+        {loading ? stage : "Generate"} <span aria-hidden="true">↗</span>
       </button>
       <p className="preview-note" role="status">
         {loading
-          ? "Waiting for the backend…"
-          : "Text preview + mock history · No AI content or document exports yet"}
+          ? stage
+          : "One Astra call per optimization · Generate Word/PDF from saved History"}
       </p>
     </form>
   );

@@ -29,6 +29,8 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - name: Install PDF renderer and matching fonts
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-writer fonts-liberation fonts-crosextra-carlito
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck

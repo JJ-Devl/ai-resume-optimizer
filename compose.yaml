@@ -15,5 +15,29 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+  garage:
+    # Start explicitly with npm run storage:up; database-only commands stay unchanged.
+    profiles: ["storage"]
+    image: dxflrs/garage:v2.5.0
+    command: ["/garage", "server", "--single-node", "--default-bucket"]
+    env_file:
+      - path: ./.env.storage
+        required: false
+    ports:
+      - "127.0.0.1:3900:3900"
+    volumes:
+      - ./infra/garage/garage.toml:/etc/garage.toml:ro
+      - garage_data:/var/lib/garage/data
+      - garage_meta:/var/lib/garage/meta
+    healthcheck:
+      test: ["CMD", "/garage", "status"]
+      interval: 5s
+      timeout: 5s
+      start_period: 10s
+      retries: 12
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  garage_data:
+  garage_meta:

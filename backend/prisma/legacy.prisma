@@ -1,0 +1,22 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Generation {
+  id             String   @id @default(uuid())
+  companyName    String   @map("company_name")
+  jobTitle       String   @map("job_title")
+  resumeFilename String   @map("resume_filename")
+  createdAt      DateTime @map("created_at") @db.Timestamptz(6)
+  status         String
+  source         String
+
+  @@index([createdAt(sort: Desc)], map: "generations_created")
+  @@map("generations")
+}

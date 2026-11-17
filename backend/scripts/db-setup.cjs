@@ -49,7 +49,7 @@ async function setup() {
           "diff",
           "--from-config-datasource",
           "--to-schema",
-          "prisma/schema.prisma",
+          "prisma/legacy.prisma",
           "--exit-code",
         ],
         [0, 2],

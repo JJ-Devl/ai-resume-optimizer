@@ -25,3 +25,6 @@
 **/*.sqlite*
 **/*.log
 next-env.d.ts
+
+# Private server-side resume instructions
+**/prompts/*.local.*

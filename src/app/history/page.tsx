@@ -1,3 +1,4 @@
+import { ApplicationHistory } from "@/components/application-history";
 import { HistoryList } from "@/components/history-list";
 import { SiteHeader } from "@/components/site-header";
 
@@ -14,14 +15,19 @@ export default function HistoryPage() {
             next steps.
           </h1>
           <p className="lede">
-            Browse saved mock requests and sample history. Every result is a
-            preview; no resume has been generated yet.
+            Reopen your saved resumes and job descriptions without another AI
+            request.
           </p>
         </section>
-        <HistoryList />
+        <ApplicationHistory />
+        <details>
+          <summary>Development mock history</summary>
+          <HistoryList />
+        </details>
       </main>
       <footer>
-        Local demo workspace · History persists when the server restarts
+        Personal workspace · Saved history is shared by anyone with access to
+        this installation
       </footer>
     </div>
   );

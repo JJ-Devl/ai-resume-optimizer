@@ -21,6 +21,9 @@ COPY backend/package.json ./backend/package.json
 RUN npm ci --omit=dev --workspace backend --include-workspace-root=false
 
 FROM base AS runtime
+# Writer converts our generated DOCX to matching PDF; fonts are explicit.
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends libreoffice-writer fonts-liberation fonts-crosextra-carlito && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production API_HOST=0.0.0.0 API_PORT=3001
 COPY --from=dependencies --chown=node:node /app/node_modules ./node_modules
 COPY --from=dependencies --chown=node:node /app/backend ./backend

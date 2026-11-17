@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 440">
+<defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#dceaf0"/><stop offset="1" stop-color="#faf7e9"/></linearGradient><linearGradient id="road" x2="1" y2="1"><stop stop-color="#536879"/><stop offset="1" stop-color="#172d40"/></linearGradient><pattern id="glass" width="22" height="28" patternUnits="userSpaceOnUse"><rect width="22" height="28" fill="#8fa9b7"/><path d="M0 0H22V28" fill="none" stroke="#d8e5e9" stroke-width="2"/></pattern></defs>
+<rect width="640" height="440" fill="url(#sky)"/><circle cx="490" cy="88" r="48" fill="#ffdc40"/>
+<path d="M25 290V155L110 130V290M145 290V85L230 108V290M260 290V145H330V290M470 290V120L555 95V290M570 290V180H630V290" fill="url(#glass)"/>
+<path d="M0 385L640 300V440H0" fill="#c7d4d8"/>
+<path d="M130 270V440H160V270M395 230V440H425V230M570 195V440H600V195" fill="#8ba0ab"/>
+<path d="M-50 350C145 245 340 290 690 155" fill="none" stroke="#d7e1e4" stroke-width="99"/>
+<path d="M-50 339C145 234 340 279 690 144" fill="none" stroke="url(#road)" stroke-width="73"/>
+<path d="M-50 339C145 234 340 279 690 144" fill="none" stroke="#ffdc40" stroke-width="3"/>
+<path d="M-50 318C145 213 340 258 690 123M-50 360C145 255 340 300 690 165" fill="none" stroke="#f5f6eb" stroke-width="2" stroke-dasharray="20 20"/>
+<path d="M-50 292C145 187 340 232 690 97" fill="none" stroke="#354f60" stroke-width="4"/>
+<path d="M28 255V285M88 233V263M148 221V251M208 216V246M268 211V241M328 202V232M388 190V220M448 174V204M508 156V186M568 135V165" stroke="#354f60" stroke-width="3"/>
+<rect x="230" y="252" width="26" height="12" rx="4" fill="#ffdc40" transform="rotate(-5 230 252)"/><rect x="436" y="219" width="25" height="12" rx="4" fill="#fff" transform="rotate(-18 436 219)"/>
+</svg>
