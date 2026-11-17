@@ -31,3 +31,6 @@ tmp/
 .vercel/
 .DS_Store
 Thumbs.db
+
+# Private server-side resume instructions
+backend/prompts/*.local.*

@@ -39,6 +39,16 @@ services:
       API_PORT: "3001"
       SEED_DEMO: "false"
       MOCK_SCENARIOS: "false"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      RESUME_AI_ENABLED: ${RESUME_AI_ENABLED:-true}
+      S3_ENDPOINT: http://garage:3900
+      S3_PUBLIC_ENDPOINT: http://127.0.0.1:3904
+    env_file:
+      - path: ./.env.storage-client
+        required: false
+    volumes:
+      # Private local instructions enter at runtime, never during image builds.
+      - ./backend/prompts:/app/backend/prompts:ro
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -58,5 +68,29 @@ services:
       api:
         condition: service_healthy
 
+  garage:
+    # Start explicitly with npm run storage:up; database-only commands stay unchanged.
+    profiles: ["storage"]
+    image: dxflrs/garage:v2.5.0
+    command: ["/garage", "server", "--single-node", "--default-bucket"]
+    env_file:
+      - path: ./.env.storage
+        required: false
+    ports:
+      - "127.0.0.1:3904:3900"
+    volumes:
+      - ./infra/garage/garage.toml:/etc/garage.toml:ro
+      - garage_data:/var/lib/garage/data
+      - garage_meta:/var/lib/garage/meta
+    healthcheck:
+      test: ["CMD", "/garage", "status"]
+      interval: 5s
+      timeout: 5s
+      start_period: 10s
+      retries: 12
+    restart: unless-stopped
+
 volumes:
   image_test_data:
+  garage_data:
+  garage_meta:

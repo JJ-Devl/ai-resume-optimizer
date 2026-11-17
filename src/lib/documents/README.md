@@ -14,21 +14,21 @@ required Word parts are rejected. Filename and MIME alone are never trusted.
 PDF parsing uses pdf-parse; DOCX raw-text extraction uses Mammoth. Each extraction
 runs in a separate process with a 128 MiB JavaScript heap limit and a 15-second
 deadline. Native memory is not covered by this heap limit; this is not an OS
-security sandbox. No paths or URLs are passed to the parsers. No document bytes
-or extracted text are persisted or logged. Responses use Cache-Control: no-store.
+security sandbox. No paths or URLs are passed to the parsers. The preview endpoint does not persist or log document bytes or extracted text.
+The separate optimization flow saves extracted text with successful AI history;
+original uploaded file bytes are not stored. Responses use Cache-Control: no-store.
 
 Image-only PDFs return an OCR-required message. Images alongside selectable text
 do not prevent extraction; image text is not recognized. Empty, corrupt, and
 password-protected files return errors. Column reading order may differ from the
 original layout. The browser renders escaped plain text, never HTML.
 
-After preview, the browser calls the existing JSON mock endpoint. Its metadata
-contract remains backward compatible; a mock history record is not proof of
-validated extraction. Future AI work must use validated server content.
+The Astra flow uploads the file and job fields once to the AI optimization endpoint, which validates and extracts the bytes before calling Astra. It returns original and optimized text together. Explicit development mock scenarios call documents/preview first, then use the existing JSON generations endpoint; a mock history record is not proof of validated extraction.
 
-Browser preview timeout is 30 seconds; existing mock timeout stays at 8 seconds.
-Editing any form field clears stale results; inputs survive failures. A preview
-remains available when the subsequent mock history request fails.
+Browser preview timeout is 30 seconds; AI requests allow 120 seconds; mock timeout stays at 8 seconds.
+Editing any form field clears stale results; inputs survive failures. For mock scenarios, a preview
+remains available when the subsequent mock history request fails. AI errors return
+no preview; the original text appears with the optimized result after success.
 
 Run `npm run build --workspace backend`, then
 `node --test backend/test/documents.test.cjs` from the repository root for

@@ -1,14 +1,15 @@
 # AI Resume Optimizer
 
+![AI Resume Optimizer — yellow and white interface](docs/images/app-cover.png)
+
 A Next.js + TypeScript frontend with a NestJS API and a PostgreSQL history
-database. This milestone demonstrates a real request/response and persistence
-flow using mock generation. Milestone 1 adds real PDF/DOCX text extraction and a
-browser preview. Authentication, AI calls, OCR, and document exports are not implemented.
+database. The application provides a request/response and persistence
+flow with PDF/DOCX extraction and GPT-6 Astra resume optimization. Generate makes one paid AI call, displays a structured tailored draft, and saves it with the job description in PostgreSQL. Mock history remains available for development. Word/PDF generation and Garage storage are available from saved History records. Authentication and OCR are not implemented.
 
 ## Run locally
 
 Use Node.js 24 LTS and PostgreSQL 17. For the supplied local database setup,
-install and start Docker Desktop. From the repository root in PowerShell:
+install and start Docker Desktop. Install LibreOffice Writer for Word-to-PDF conversion. From the repository root in PowerShell:
 
 ```powershell
 npm ci
@@ -42,13 +43,31 @@ Optional configuration:
 
 - Copy .env.example to .env.local for Next.js configuration.
 - DATABASE_URL in backend/.env configures the API's PostgreSQL connection.
-- No API key is required. Restart services after changing configuration.
+- Preview and mock tests need no API key. Astra requires OPENAI_API_KEY in the ignored backend/.env. Restart the API after changing it.
+- Owner prompt rules live in ignored backend/prompts/resume.local.txt, with a generic public fallback. See [private prompt setup](backend/prompts/README.md). Users can provide their own rules in the form’s optional writing-preferences field.
 - Change API_PORT and API_BASE_URL together if changing the backend port.
 - SEED_DEMO=false stops inserting demo rows; existing rows are preserved.
 - MOCK_SCENARIOS=false disables error simulations. NODE_ENV=production always
   disables simulations and demo seeding, but existing demo records remain.
 
-## Try the milestone
+## Local S3-compatible storage
+
+Garage is an optional Compose service with persistent data and metadata volumes.
+Start Docker Desktop, then run from the repository root:
+
+```powershell
+npm run storage:up
+npm run storage:test
+```
+
+Local credentials are generated into the ignored .env.storage file. The private
+resume-documents bucket is created at startup. Development storage uses port 3900;
+image Compose uses 3904. The backend SDK is installed; AI history is saved in PostgreSQL; Word/PDF files are generated on request from
+History and stored in Garage.
+See [Garage setup and reading guide](infra/garage/README.md) for signed-link tests,
+container-recreation persistence checks, and storage configuration files.
+
+## How to use
 
 1. Choose a PDF or DOCX (nonempty, up to 5 MB).
 2. Paste a job description. For predictable history labels, include:
@@ -60,17 +79,15 @@ Role: Frontend Engineer
 Build accessible React applications with TypeScript.
 ```
 
-3. Click Generate. The resume is uploaded and previewed, then a mock history record is saved.
-4. Follow View history. Refresh or restart the server to verify persistence.
+3. Click Generate. The resume is uploaded once; Astra tailors it to the job, then original and optimized text appear together. Open the saved result in History later without another model request.
+4. History lists saved AI resumes; open one to see its original text, JD and optimized content. Development mock records remain in a separate expandable section.
 5. Expand Test a backend response to select a failure, then click Generate.
    Inputs remain available to retry. Failed simulations do not save records.
 
 The frontend prevents duplicate in-flight submissions and uses an 8-second
-timeout for mock requests and 30 seconds for preview uploads. Each new successful
-submission creates a separate record. If the
-connection fails after a real successful write, inspect History before retrying.
+timeout for mock requests, 30 seconds for preview uploads, and 120 seconds for AI optimization. Each successful mock submission creates a history record; successful AI submissions save a complete snapshot. Check History before retrying after a timeout; retrying AI makes a new paid request.
 
-### Error scenarios
+### Development mock scenarios (no AI calls)
 
 - Success: HTTP 201 with a saved mock record.
 - Resume rejected: HTTP 422.
@@ -93,7 +110,13 @@ All endpoints are prefixed with /api:
 - GET /health: service status.
 - GET /capabilities: mock mode and whether error simulations are enabled.
 - GET /generations: latest 50 records, newest first.
-- POST /generations: validate JSON, simulate an outcome, and save on success.
+- POST /generations: validate JSON, simulate an outcome, and save a mock record on success.
+- POST /optimizations: validate a multipart resume and job description, extract text, call Astra once, save the result, and return the draft plus saved ID and token usage.
+- GET /optimizations: latest 50 saved AI application summaries.
+- GET /optimizations/:id: saved structured resume, plain text, source text, JD and usage; no AI request.
+- POST /optimizations/:id/documents: generate/store a Word/PDF pair from the saved content.
+- GET /optimizations/:id/documents/:format: get a temporary docx/pdf download link.
+- DELETE /optimizations/:id: delete tracked files, then the saved application.
 - POST /documents/preview: validate one multipart resume upload and return extracted text without saving the file or text.
 
 Example JSON:
@@ -112,12 +135,17 @@ characters. Job descriptions are limited to 30,000 characters. Unknown fields,
 unknown scenarios, missing required data, and invalid types return HTTP 400.
 Errors use { "statusCode": 400, "error": { "code": "...", "message": "..." } }.
 
-The browser uploads the actual resume to POST /api/documents/preview as multipart
-FormData with one resume file and no other fields. The response is
-{ text, originalFilename, format }. The browser then sends metadata and form text
-to the existing mock endpoint. A preview remains visible if saving history fails.
-Only company, role, filename, ID, timestamp, source, and mock status are persisted.
-Job description, URL, custom prompt, and resume contents are not stored.
+The browser uploads the actual resume and job fields once to POST /api/optimizations
+as multipart FormData. The response includes original extracted text and the
+optimized resume, displayed together after success. Explicit development mock
+scenarios call /documents/preview first, then /generations; their original text
+preview remains visible if mock saving fails.
+Legacy mock records store only company, role, filename, ID, timestamp, source and status.
+AI applications additionally persist extracted source text, JD and optional URL,
+validated structured resume, derived plain text, changes, model and token usage.
+Neither private server rules nor candidate customPrompt text is persisted.
+History is shared by anyone who can access this personal installation; there is
+no per-user authentication yet.
 Explicit Company: and Role: / Job title: lines supply labels; otherwise labels
 say "not specified". This is not AI extraction.
 
@@ -129,13 +157,13 @@ src/
   components/            Form, shared navigation, history list
   lib/api.ts             Fetch, timeout, and error handling
   lib/documents/         Browser file metadata checks
-  lib/ai/                Future AI boundary
+  lib/ai/                AI boundary documentation
   types/                 Frontend data contracts
 backend/
   src/main.ts            API startup and environment loading
   src/app.ts             Nest module, request validation, error filter
   src/generations/       Controller, DTO, mock orchestration
-  prisma/schema.prisma  Generation model and database column mappings
+  prisma/schema.prisma  Legacy Generation and real Application models
   prisma/migrations/    Versioned SQL migrations, committed to Git
   prisma.config.ts      Prisma CLI configuration and connection settings
   scripts/db-setup.cjs   Safe first-time migration / legacy adoption
@@ -147,8 +175,9 @@ compose.yaml             Local PostgreSQL service and persistent volume
 .github/workflows/        Frontend/backend CI
 ```
 
-Browser form → /api/generations → Next.js proxy → NestJS controller → validated
-DTO → service → database → JSON response → success/error UI.
+Browser form → /api/optimizations → Next.js proxy → NestJS validation/extraction
+→ Astra structured output → PostgreSQL Application snapshot → preview/History.
+Mock scenarios retain the separate /api/generations flow.
 
 History uses the same proxy and database. NestJS owns the backend logic.
 The backend uses Prisma ORM 7 with its PostgreSQL adapter (pg remains the driver).
@@ -227,3 +256,85 @@ References: [NestJS validation](https://docs.nestjs.com/techniques/validation),
 [Prisma with NestJS](https://docs.nestjs.com/recipes/prisma).
 
 See src/lib/documents/README.md for upload limits, extraction behavior, and tests.
+
+For the current AI workflow, prompt policy, runtime secrets and limits, see [Astra integration](backend/src/ai/README.md).
+
+## Structured resumes and saved AI history
+
+See [implementation and reading guide](backend/src/ai/HISTORY.md) for the agreed
+sections, database migration, error behavior, new pages, and all files changed.
+
+## Word and PDF files
+
+Open a saved application in History and choose Generate Word and PDF. Downloads
+become available after both files are stored. Regenerate changes formatting without
+an AI call. Delete application removes its tracked files and database snapshot.
+Host development needs LibreOffice Writer; the API image and CI install it.
+Run `npm run exports:test` for a synthetic end-to-end check with local PostgreSQL
+and Garage. See [export setup and reading guide](backend/src/exports/README.md).
+
+## Customize the AI integration
+
+The default implementation uses the OpenAI Responses API in
+[astra.client.ts](backend/src/ai/astra.client.ts). Bring your own API key and
+provider account; API usage is billed separately. No key is included in this
+repository.
+
+1. Copy backend/.env.example to backend/.env only on first setup.
+2. Set OPENAI_API_KEY in that backend file and leave RESUME_AI_ENABLED=true.
+3. Restart the backend. Never put the key in frontend code or a NEXT_PUBLIC_ variable.
+4. Submit a small example and review its output before using real applications.
+
+### Customize instructions
+
+- For one application, enter instructions in the form's optional writing-preferences field.
+- For installation-wide rules, create backend/prompts/resume.local.txt containing
+  plain UTF-8 text. This file is ignored by Git and excluded from Docker builds.
+- Alternatively set RESUME_PROMPT_FILE in backend/.env; relative paths resolve
+  from backend/. An explicitly configured missing or empty file causes an error.
+- Without a private file, the public default in
+  [resume.prompt.ts](backend/src/ai/resume.prompt.ts) is used.
+- The public output contract is appended to your rules so the returned sections
+  still work with validation, history and exports. Keep personal facts accurate
+  and avoid asking the model to invent employment, credentials or achievements.
+- Docker deployment mounts the private prompt folder at runtime. Provide your own
+  file on the deployment host; GitHub does not contain the owner's private rules.
+
+### Change models or providers
+
+The model is currently the ASTRA_MODEL constant in
+[astra.client.ts](backend/src/ai/astra.client.ts), not an environment setting.
+To switch models, edit that constant and check the target model's support for
+strict JSON-schema output, reasoning settings and output token limits. Update
+model-specific UI labels and tests as well.
+
+To use a different provider, adapt the request URL, authentication, request body
+and response parsing inside the server-side client. Return the same
+resume/resumeText/changes/skillsAdded/model/usage contract. Keep
+[resume.schema.ts](backend/src/ai/resume.schema.ts) validation before saving.
+Provider APIs are not interchangeable just because they accept an API key.
+
+The current client has a 90-second deadline, no automatic billable retries, and
+sanitized errors. Preserve these protections and update mocked provider tests in
+backend/test/ai.test.cjs when changing the integration. Do not commit real keys,
+private prompts, resumes, or provider response dumps.
+
+### Customize the generated documents
+
+Edit [resume-renderer.ts](backend/src/exports/resume-renderer.ts) for typography,
+spacing and section layout, then regenerate files from History. This uses saved
+content without another AI charge. Install LibreOffice Writer locally for PDF
+conversion; the backend Docker image includes it.
+
+## Development and contributions
+
+Use npm ci from the repository root; the root lockfile manages both workspaces.
+Before proposing changes run npm run lint, npm run typecheck and npm test.
+Database tests require PostgreSQL and TEST_DATABASE_URL; rendering tests require
+LibreOffice. npm run exports:test additionally requires Garage. These tests use
+synthetic fixtures and do not require a paid AI call.
+
+Keep changes focused, describe how they were checked, and commit schema migrations
+with database changes. Do not add local environment files or generated resumes.
+This project currently has no user authentication: use it locally with personal
+data until access controls are implemented.

@@ -12,7 +12,13 @@ const MIME = {
 export class DocumentsService {
   private active = 0;
 
-  async extract(file?: Express.Multer.File) {
+  async extract(
+    file?: Express.Multer.File,
+  ): Promise<{
+    text: string;
+    originalFilename: string;
+    format: "pdf" | "docx";
+  }> {
     const reject = (code: string, message: string, status = 400): never => {
       throw new HttpException({ code, message }, status);
     };

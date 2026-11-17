@@ -1,3 +1,8 @@
+import { ExportsController } from "./exports/exports.controller";
+import { ExportsService } from "./exports/exports.service";
+import { ExportRepository } from "./exports/export.repository";
+import { StorageService } from "./exports/storage.service";
+import { ResumeRenderer } from "./exports/resume-renderer";
 import { Module, ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
@@ -7,10 +12,28 @@ import { GenerationsController } from "./generations/generations.controller";
 import { GenerationsService } from "./generations/generations.service";
 import { DocumentsController } from "./documents/documents.controller";
 import { DocumentsService } from "./documents/documents.service";
+import { OptimizationController } from "./ai/optimization.controller";
+import { OptimizationService } from "./ai/optimization.service";
+import { AstraClient } from "./ai/astra.client";
 
 @Module({
-  controllers: [GenerationsController, DocumentsController],
-  providers: [DatabaseService, GenerationsService, DocumentsService],
+  controllers: [
+    GenerationsController,
+    DocumentsController,
+    OptimizationController,
+    ExportsController,
+  ],
+  providers: [
+    DatabaseService,
+    GenerationsService,
+    DocumentsService,
+    OptimizationService,
+    AstraClient,
+    ExportsService,
+    ExportRepository,
+    StorageService,
+    ResumeRenderer,
+  ],
 })
 class AppModule {}
 

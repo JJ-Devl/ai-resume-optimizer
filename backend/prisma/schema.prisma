@@ -20,3 +20,51 @@ model Generation {
   @@index([createdAt(sort: Desc)], map: "generations_created")
   @@map("generations")
 }
+
+
+// One immutable snapshot per successful optimization; legacy mock rows stay intact.
+model Application {
+  id             String   @id @default(uuid())
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  companyName    String   @map("company_name")
+  jobTitle       String   @map("job_title")
+  resumeFilename String   @map("resume_filename")
+  resumeFormat   String   @map("resume_format")
+  originalText   String   @map("original_text")
+  jobDescription String   @map("job_description")
+  jobUrl         String?  @map("job_url")
+  schemaVersion  Int      @default(1) @map("schema_version")
+  resume         Json
+  resumeText     String   @map("resume_text")
+  changes        Json
+  skillsAdded    Json     @map("skills_added")
+  model          String
+  inputTokens    Int      @map("input_tokens")
+  outputTokens   Int      @map("output_tokens")
+  reasoningTokens Int     @map("reasoning_tokens")
+
+  documentStatus String @default("not_generated") @map("document_status")
+  documentError String? @map("document_error")
+  documentsGeneratedAt DateTime? @map("documents_generated_at") @db.Timestamptz(6)
+  templateVersion String? @map("template_version")
+  documentToken String? @map("document_token")
+  documentLeaseUntil DateTime? @map("document_lease_until") @db.Timestamptz(6)
+  exports DocumentExport[]
+
+  @@index([createdAt(sort: Desc), id(sort: Desc)], map: "applications_created")
+  @@map("applications")
+}
+
+model DocumentExport {
+  id String @id @default(uuid())
+  applicationId String @map("application_id")
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  state String @default("pending")
+  templateVersion String @map("template_version")
+  docxKey String @unique @map("docx_key")
+  pdfKey String @unique @map("pdf_key")
+
+  @@index([applicationId], map: "document_exports_application")
+  @@map("document_exports")
+}
