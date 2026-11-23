@@ -22,7 +22,16 @@ function responseBody(overrides = {}) {
     output: [
       {
         type: "message",
-        content: [{ type: "output_text", text: JSON.stringify(polished) }],
+        content: [
+          {
+            type: "output_text",
+            text: JSON.stringify({
+              ...polished,
+              companyName: "Northstar",
+              jobTitle: "Analyst",
+            }),
+          },
+        ],
       },
     ],
     usage: {
@@ -104,6 +113,8 @@ test("Astra contract and multipart optimization without paid requests", async (t
       fields = {
         jobDescription: "Reporting role requiring SQL",
         customPrompt: "Keep it concise.",
+        companyName: "Manual company",
+        jobTitle: "Manual title",
         jobUrl: "https://example.com/job",
       },
       bytes = pdf(),
@@ -131,7 +142,11 @@ test("Astra contract and multipart optimization without paid requests", async (t
         assert(body.application.id);
         assert.equal(body.saveError, null);
         assert.equal(saved.length, 1);
+        assert.equal(saved[0].input.companyName, "Manual company");
+        assert.equal(saved[0].input.jobTitle, "Manual title");
         assert.match(saved[0].original.text, /Prepared weekly reports/);
+        assert.equal(body.optimized.companyName, "Northstar");
+        assert.equal(body.optimized.jobTitle, "Analyst");
         assert.equal(body.optimized.model, "gpt-6-astra");
         assert.deepEqual(body.optimized.usage, {
           inputTokens: 500,
@@ -212,6 +227,8 @@ test("Astra contract and multipart optimization without paid requests", async (t
         { jobDescription: "x", model: "other" },
         { jobDescription: "x", jobUrl: "file:///etc/passwd" },
         { jobDescription: "x", customPrompt: "x".repeat(5001) },
+        { jobDescription: "x", companyName: "x".repeat(161) },
+        { jobDescription: "x", jobTitle: "x".repeat(161) },
       ])
         assert.equal((await post(fields)).status, 400);
       assert.equal((await post({ jobDescription: "x" }, null)).status, 400);

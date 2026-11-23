@@ -1,9 +1,6 @@
+import { OPTIMIZATION_SCHEMA, parseOptimizationOutput } from "./resume.schema";
 import { HttpException, Injectable } from "@nestjs/common";
-import {
-  loadResumePrompt,
-  RESUME_SCHEMA,
-  parseResumeOutput,
-} from "./resume.prompt";
+import { loadResumePrompt } from "./resume.prompt";
 import type { OptimizationDto } from "./optimization.dto";
 
 export const ASTRA_MODEL = "gpt-6-astra";
@@ -71,7 +68,7 @@ export class AstraClient {
               type: "json_schema",
               name: "optimized_resume",
               strict: true,
-              schema: RESUME_SCHEMA,
+              schema: OPTIMIZATION_SCHEMA,
             },
           },
         }),
@@ -130,7 +127,7 @@ export class AstraClient {
           "The model did not finish within its output budget. No partial resume was returned. Try a shorter resume or job description.",
           422,
         );
-      const result = parseResumeOutput(
+      const result = parseOptimizationOutput(
         content
           .filter((item) => item.type === "output_text")
           .map((item) => item.text ?? "")

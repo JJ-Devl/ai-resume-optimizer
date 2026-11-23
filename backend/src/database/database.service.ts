@@ -143,11 +143,14 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       input.jobDescription.match(pattern)?.[1].trim().slice(0, 160) || fallback;
     const row = await this.prisma.application.create({
       data: {
-        companyName: label(/^Company:[ \t]*(.+)$/im, "Company not specified"),
-        jobTitle: label(
-          /^(?:Role|Job title):[ \t]*(.+)$/im,
-          "Role not specified",
-        ),
+        companyName:
+          input.companyName?.trim() ||
+          optimized.companyName?.trim() ||
+          label(/^Company:[ \t]*(.+)$/im, "Company not specified"),
+        jobTitle:
+          input.jobTitle?.trim() ||
+          optimized.jobTitle?.trim() ||
+          label(/^(?:Role|Job title):[ \t]*(.+)$/im, "Role not specified"),
         resumeFilename: original.originalFilename,
         resumeFormat: original.format,
         originalText: original.text,
@@ -165,9 +168,10 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     return { ...row, createdAt: row.createdAt.toISOString() };
   }
 
-  async listApplications() {
+  async listApplications(status?: "generated" | "applied") {
     const rows = await this.prisma.application.findMany({
       select: applicationSummarySelect,
+      where: status ? { applied: status === "applied" } : undefined,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: 50,
     });
@@ -175,6 +179,14 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       ...row,
       createdAt: row.createdAt.toISOString(),
     }));
+  }
+
+  async setApplicationApplied(id: string, applied: boolean) {
+    const result = await this.prisma.application.updateMany({
+      where: { id },
+      data: { applied },
+    });
+    return result.count > 0;
   }
 
   async getApplication(id: string) {
@@ -188,6 +200,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       resumeFilename: row.resumeFilename,
       schemaVersion: row.schemaVersion,
       documentStatus: row.documentStatus,
+      applied: row.applied,
       documents: {
         status: row.documentStatus,
         error: row.documentError,
@@ -222,6 +235,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
 }
 
 const applicationSummarySelect = {
+  applied: true,
   id: true,
   createdAt: true,
   companyName: true,

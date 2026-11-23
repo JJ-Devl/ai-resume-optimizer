@@ -81,9 +81,9 @@ export function getCapabilities() {
   }>("capabilities");
 }
 
-export function getApplications() {
+export function getApplications(status?: "generated" | "applied") {
   return apiRequest<{ items: ApplicationSummary[]; limit: number }>(
-    "optimizations",
+    status ? "optimizations?status=" + status : "optimizations",
   );
 }
 export function getApplication(id: string) {
@@ -107,5 +107,16 @@ export function deleteApplication(id: string) {
   return apiRequest<{ deleted: boolean }>(
     "optimizations/" + encodeURIComponent(id),
     { method: "DELETE" },
+  );
+}
+
+export function setApplicationApplied(id: string, applied: boolean) {
+  return apiRequest<{ id: string; applied: boolean }>(
+    "optimizations/" + encodeURIComponent(id) + "/status",
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ applied }),
+    },
   );
 }

@@ -70,7 +70,7 @@ container-recreation persistence checks, and storage configuration files.
 ## How to use
 
 1. Choose a PDF or DOCX (nonempty, up to 5 MB).
-2. Paste a job description. For predictable history labels, include:
+2. Optionally enter Company name and Job title. Each manual entry takes priority; blank fields are extracted by AI from the job description in the same request. Unknown values display as not specified. Existing history is unchanged. Paste a job description, for example:
 
 ```text
 Company: Example Company
@@ -146,8 +146,8 @@ validated structured resume, derived plain text, changes, model and token usage.
 Neither private server rules nor candidate customPrompt text is persisted.
 History is shared by anyone who can access this personal installation; there is
 no per-user authentication yet.
-Explicit Company: and Role: / Job title: lines supply labels; otherwise labels
-say "not specified". This is not AI extraction.
+Manual company/title fields override AI-extracted values independently. Explicit Company: and Role: / Job title: lines are a fallback; otherwise labels
+say "not specified". No additional AI call is made for these labels.
 
 ## Structure and request flow
 
@@ -338,3 +338,16 @@ Keep changes focused, describe how they were checked, and commit schema migratio
 with database changes. Do not add local environment files or generated resumes.
 This project currently has no user authentication: use it locally with personal
 data until access controls are implemented.
+
+## Track submitted applications
+
+History has Generated and Applied sections. Click Applied on a generated resume
+after submitting your application to the employer. It moves to Applied and stays
+there across refreshes and server restarts. Move back to Generated undoes the change.
+This tracks your progress only; it does not submit anything to a job website or call AI.
+Each section shows its latest 50 records by creation date.
+
+Apply the new additive migration with npm run db:deploy before starting the updated
+backend. Existing applications start in Generated; saved content and files are retained.
+PATCH /api/optimizations/:id/status accepts { "applied": true } or false.
+GET /api/optimizations?status=generated (or applied) filters before the 50-record limit.

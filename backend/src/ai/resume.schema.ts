@@ -83,8 +83,15 @@ export const RESUME_SCHEMA = object({
   changes: array(text),
   skillsAdded: array(text),
 });
+export const OPTIMIZATION_SCHEMA = object({
+  ...RESUME_SCHEMA.properties,
+  companyName: text,
+  jobTitle: text,
+});
 export type StructuredResume = Infer<typeof RESUME_CONTENT_SCHEMA>;
 export interface OptimizedResume {
+  companyName?: string;
+  jobTitle?: string;
   resume: StructuredResume;
   resumeText: string; // Derived locally; never a second AI-generated version.
   changes: string[];
@@ -211,4 +218,22 @@ export function parseResumeOutput(text: string): OptimizedResume {
   if (!resumeText.trim() || resumeText.length > 60000)
     throw new Error("Invalid resume content");
   return { ...result, resumeText };
+}
+
+/** Provider metadata is separate from the saved resume content/export contract. */
+export function parseOptimizationOutput(text: string): OptimizedResume {
+  if (text.length > 100000) throw new Error("Result too large");
+  const value: unknown = JSON.parse(text);
+  if (!validate(value, OPTIMIZATION_SCHEMA))
+    throw new Error("Invalid optimization");
+  const { companyName, jobTitle, ...content } = value as Infer<
+    typeof OPTIMIZATION_SCHEMA
+  >;
+  if (companyName.trim().length > 160 || jobTitle.trim().length > 160)
+    throw new Error("Invalid job metadata");
+  return {
+    ...parseResumeOutput(JSON.stringify(content)),
+    companyName: companyName.trim(),
+    jobTitle: jobTitle.trim(),
+  };
 }

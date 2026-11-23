@@ -83,6 +83,10 @@ export function OptimizerForm() {
         : "astra";
       if (scenario === "astra") {
         upload.append("jobDescription", jobDescription);
+        for (const field of ["companyName", "jobTitle"]) {
+          const value = String(data.get(field) ?? "").trim();
+          if (value) upload.append(field, value);
+        }
         if (jobUrl) upload.append("jobUrl", jobUrl);
         const customPrompt = String(data.get("customPrompt") ?? "").trim();
         if (customPrompt) upload.append("customPrompt", customPrompt);
@@ -153,79 +157,121 @@ export function OptimizerForm() {
           setError(null);
         }}
       >
-        <section className="form-step"><h3><span>01</span> Your experience</h3><div className="field"><label htmlFor="resume">
-            Your resume <span>*</span>
-          </label>
-          <div className="upload">
-            <span className="upload-icon" aria-hidden="true">
-              ↑
-            </span>
-            <strong>
-              {resume ? resume.name : "A good starting point: your experience"}
-            </strong>
-            <p id="resume-help">
-              Text-based PDF or DOCX · Up to 5 MB · Uploaded for text preview
-            </p>
+        <section className="form-step">
+          <h3>
+            <span>01</span> Your experience
+          </h3>
+          <div className="field">
+            <label htmlFor="resume">
+              Your resume <span>*</span>
+            </label>
+            <div className="upload">
+              <span className="upload-icon" aria-hidden="true">
+                ↑
+              </span>
+              <strong>
+                {resume
+                  ? resume.name
+                  : "A good starting point: your experience"}
+              </strong>
+              <p id="resume-help">
+                Text-based PDF or DOCX · Up to 5 MB · Uploaded for text preview
+              </p>
+              <input
+                id="resume"
+                name="resume"
+                type="file"
+                accept={RESUME_ACCEPT}
+                required
+                aria-describedby="resume-help"
+                onChange={(event) => {
+                  setResume(event.target.files?.[0] ?? null);
+                }}
+              />
+            </div>
+          </div>
+        </section>
+        <section className="form-step">
+          <h3>
+            <span>02</span> The opportunity
+          </h3>
+          <div className="field">
+            <label htmlFor="companyName">
+              Company name <small>Optional</small>
+            </label>
             <input
-              id="resume"
-              name="resume"
-              type="file"
-              accept={RESUME_ACCEPT}
+              id="companyName"
+              name="companyName"
+              maxLength={160}
+              placeholder="e.g. Northstar Labs"
+            />
+            <label htmlFor="jobTitle">
+              Job title <small>Optional</small>
+            </label>
+            <input
+              id="jobTitle"
+              name="jobTitle"
+              maxLength={160}
+              placeholder="e.g. Frontend Engineer"
+            />
+            <p className="hint">
+              Your entries take priority. Leave either blank to identify it from
+              the job description using AI.
+            </p>
+            <label htmlFor="jobDescription">
+              Job description <span>*</span>
+            </label>
+            <textarea
+              id="jobDescription"
+              name="jobDescription"
               required
-              aria-describedby="resume-help"
-              onChange={(event) => {
-                setResume(event.target.files?.[0] ?? null);
-              }}
+              maxLength={30000}
+              rows={7}
+              placeholder={
+                "Company: Northstar Labs\nRole: Frontend Engineer\n\nPaste the role, responsibilities, and qualifications here…"
+              }
+            />
+            <p className="hint">
+              Include the responsibilities and qualifications you want your
+              resume to address.
+            </p>
+          </div>
+          <div className="field">
+            <label htmlFor="jobUrl">
+              Job posting URL <small>Optional</small>
+            </label>
+            <input
+              id="jobUrl"
+              name="jobUrl"
+              type="url"
+              maxLength={2048}
+              placeholder="https://company.com/careers/your-next-role"
+            />
+            <p className="hint">For reference only. Links are not fetched.</p>
+          </div>
+        </section>
+        <section className="form-step">
+          <h3>
+            <span>03</span> Make it yours
+          </h3>
+          <div className="field">
+            <label htmlFor="customPrompt">
+              Your rules and writing preferences <small>Optional</small>
+            </label>
+            <textarea
+              id="customPrompt"
+              name="customPrompt"
+              maxLength={5000}
+              rows={3}
+              placeholder="e.g. Use British English, emphasize leadership, and keep the summary concise."
             />
           </div>
-        </div>
-        </section><section className="form-step"><h3><span>02</span> The opportunity</h3><div className="field"><label htmlFor="jobDescription">
-            Job description <span>*</span>
-          </label>
-          <textarea
-            id="jobDescription"
-            name="jobDescription"
-            required
-            maxLength={30000}
-            rows={7}
-            placeholder={
-              "Company: Northstar Labs\nRole: Frontend Engineer\n\nPaste the role, responsibilities, and qualifications here…"
-            }
-          />
           <p className="hint">
-            Include the responsibilities and qualifications you want your resume
-            to address.
+            These instructions apply to this application and are sent with your
+            resume and job description.
           </p>
-        </div>
-        <div className="field">
-          <label htmlFor="jobUrl">
-            Job posting URL <small>Optional</small>
-          </label>
-          <input
-            id="jobUrl"
-            name="jobUrl"
-            type="url"
-            maxLength={2048}
-            placeholder="https://company.com/careers/your-next-role"
-          />
-          <p className="hint">For reference only. Links are not fetched.</p>
-        </div>
-        </section><section className="form-step"><h3><span>03</span> Make it yours</h3><div className="field"><label htmlFor="customPrompt">
-            Your rules and writing preferences <small>Optional</small>
-          </label>
-          <textarea
-            id="customPrompt"
-            name="customPrompt"
-            maxLength={5000}
-            rows={3}
-            placeholder="e.g. Use British English, emphasize leadership, and keep the summary concise."
-          />
-        </div>
-        <p className="hint">
-          These instructions apply to this application and are sent with your
-          resume and job description.
-        </p>
-        </section>{simulations && (
+        </section>
+        {simulations && (
           <details className="demo-controls">
             <summary>Test a backend response</summary>
             <label htmlFor="scenario">Response scenario</label>
