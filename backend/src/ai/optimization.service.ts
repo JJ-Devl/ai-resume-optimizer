@@ -12,9 +12,9 @@ export class OptimizationService {
     private readonly astra: AstraClient,
     private readonly database: DatabaseService,
   ) {}
-  async list() {
+  async list(status?: "generated" | "applied") {
     try {
-      return { items: await this.database.listApplications(), limit: 50 };
+      return { items: await this.database.listApplications(status), limit: 50 };
     } catch {
       throw aiError(
         "HISTORY_UNAVAILABLE",
@@ -22,6 +22,25 @@ export class OptimizationService {
         503,
       );
     }
+  }
+  async setApplied(id: string, applied: boolean) {
+    let found;
+    try {
+      found = await this.database.setApplicationApplied(id, applied);
+    } catch {
+      throw aiError(
+        "HISTORY_UNAVAILABLE",
+        "Could not update application status. Please try again.",
+        503,
+      );
+    }
+    if (!found)
+      throw aiError(
+        "APPLICATION_NOT_FOUND",
+        "This saved application was not found.",
+        404,
+      );
+    return { id, applied };
   }
   async find(id: string) {
     let application;

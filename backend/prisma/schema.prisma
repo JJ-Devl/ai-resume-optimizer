@@ -43,6 +43,7 @@ model Application {
   outputTokens   Int      @map("output_tokens")
   reasoningTokens Int     @map("reasoning_tokens")
 
+  applied Boolean @default(false)
   documentStatus String @default("not_generated") @map("document_status")
   documentError String? @map("document_error")
   documentsGeneratedAt DateTime? @map("documents_generated_at") @db.Timestamptz(6)

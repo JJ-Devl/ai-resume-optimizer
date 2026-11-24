@@ -55,3 +55,24 @@ test("strict nested validation rejects malformed, legacy and oversized output", 
     assert.throws(() => parseResumeOutput(JSON.stringify(value))),
   );
 });
+
+test("AI job metadata must be present, typed and bounded; exports retain the existing content contract", () => {
+  const { parseOptimizationOutput } = require("../dist/ai/resume.schema");
+  const value = { ...output, companyName: " Example ", jobTitle: " Engineer " };
+  assert.equal(
+    parseOptimizationOutput(JSON.stringify(value)).companyName,
+    "Example",
+  );
+  for (const bad of [
+    output,
+    { ...value, jobTitle: null },
+    { ...value, companyName: "x".repeat(161) },
+  ])
+    assert.throws(() => parseOptimizationOutput(JSON.stringify(bad)));
+  assert.equal(
+    parseOptimizationOutput(
+      JSON.stringify({ ...value, companyName: "", jobTitle: "" }),
+    ).companyName,
+    "",
+  );
+});

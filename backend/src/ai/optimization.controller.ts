@@ -1,5 +1,11 @@
 import {
+  ApplicationStatusDto,
+  HistoryFilterDto,
+} from "./application-status.dto";
+import {
   Body,
+  Patch,
+  Query,
   Controller,
   Header,
   Get,
@@ -21,14 +27,23 @@ export class OptimizationController {
   constructor(private readonly optimization: OptimizationService) {}
   @Get()
   @Header("Cache-Control", "no-store")
-  list() {
-    return this.optimization.list();
+  list(@Query() filter: HistoryFilterDto) {
+    return this.optimization.list(filter.status);
   }
 
   @Get(":id")
   @Header("Cache-Control", "no-store")
   find(@Param("id", new ParseUUIDPipe({ version: "4" })) id: string) {
     return this.optimization.find(id);
+  }
+
+  @Patch(":id/status")
+  @Header("Cache-Control", "no-store")
+  setApplied(
+    @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
+    @Body() input: ApplicationStatusDto,
+  ) {
+    return this.optimization.setApplied(id, input.applied);
   }
 
   @Post()
@@ -38,8 +53,8 @@ export class OptimizationController {
       limits: {
         fileSize: MAX_RESUME_BYTES,
         files: 1,
-        fields: 3,
-        parts: 5,
+        fields: 5,
+        parts: 7,
         fieldSize: 120000,
         fieldNameSize: 100,
       },

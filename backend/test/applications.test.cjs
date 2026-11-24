@@ -155,10 +155,54 @@ test("real application HTTP history persists structured content across restarts"
         );
       },
     );
+    await t.test(
+      "job metadata prefers each manual field independently and persists AI fallback",
+      async () => {
+        const db = app.get(DatabaseService);
+        for (const [manual, metadata, expected] of [
+          [
+            {},
+            { companyName: "AI Company", jobTitle: "AI Role" },
+            ["AI Company", "AI Role"],
+          ],
+          [
+            { companyName: "  My Company  " },
+            { companyName: "AI Company", jobTitle: "AI Role" },
+            ["My Company", "AI Role"],
+          ],
+          [
+            { jobTitle: " My Role " },
+            { companyName: "AI Company", jobTitle: "AI Role" },
+            ["AI Company", "My Role"],
+          ],
+          [
+            { companyName: "  ", jobTitle: "" },
+            { companyName: "", jobTitle: "" },
+            ["Company not specified", "Role not specified"],
+          ],
+        ]) {
+          const saved = await db.saveApplication(
+            {
+              text: "Source",
+              originalFilename: "fixture.docx",
+              format: "docx",
+            },
+            { jobDescription: "Unlabeled posting", ...manual },
+            { ...optimized, ...metadata },
+          );
+          const detail = await db.getApplication(saved.id);
+          assert.deepEqual([detail.companyName, detail.jobTitle], expected);
+          const list = await (await fetch(base + "/api/optimizations")).json();
+          const item = list.items.find((item) => item.id === saved.id);
+          assert.deepEqual([item.companyName, item.jobTitle], expected);
+        }
+      },
+    );
     await t.test("history is bounded to the latest 50 snapshots", async () => {
       const db = app.get(DatabaseService);
-      for (let i = 0; i < 51; i++)
-        await db.saveApplication(
+      const timestamp = Date.now() + 60000;
+      for (let i = 0; i < 51; i++) {
+        const saved = await db.saveApplication(
           {
             text: "Synthetic source",
             originalFilename: "fixture.docx",
@@ -167,12 +211,79 @@ test("real application HTTP history persists structured content across restarts"
           { jobDescription: "Company: Pagination\nRole: Test " + i },
           optimized,
         );
+        // Explicit chronology: fast inserts can share a timestamp, in which
+        // case production correctly breaks ties by random UUID, not insertion order.
+        await db.prisma.application.update({
+          where: { id: saved.id },
+          data: { createdAt: new Date(timestamp + i * 1000) },
+        });
+      }
       const list = await (await fetch(base + "/api/optimizations")).json();
       assert.equal(list.items.length, 50);
       assert.equal(list.limit, 50);
       assert.equal(list.items[0].jobTitle, "Test 50");
+      assert.deepEqual(
+        list.items.map((item) => item.jobTitle),
+        Array.from({ length: 50 }, (_, i) => "Test " + (50 - i)),
+      );
       assert.equal(calls, 2);
     });
+    await t.test(
+      "applied tracking persists, filters before limiting, supports undo and validates input without AI",
+      async () => {
+        const id = first.application.id;
+        const change = (body, target = id) =>
+          fetch(base + "/api/optimizations/" + target + "/status", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+        const list = async (status) =>
+          (
+            await (
+              await fetch(base + "/api/optimizations?status=" + status)
+            ).json()
+          ).items;
+        assert.equal(
+          (await app.get(DatabaseService).getApplication(id)).applied,
+          false,
+        );
+        assert.equal((await change({ applied: true })).status, 200);
+        assert.equal((await change({ applied: true })).status, 200);
+        assert((await list("applied")).some((item) => item.id === id));
+        assert(!(await list("generated")).some((item) => item.id === id));
+        await app.close();
+        app = await start();
+        base = await app.getUrl();
+        const detail = await app.get(DatabaseService).getApplication(id);
+        assert.equal(detail.applied, true);
+        assert.equal(detail.optimized.resumeText, optimized.resumeText);
+        assert.equal(detail.documents.status, "not_generated");
+        assert.equal((await change({ applied: false })).status, 200);
+        assert.equal(
+          (await app.get(DatabaseService).getApplication(id)).applied,
+          false,
+        );
+        assert(!(await list("applied")).some((item) => item.id === id));
+        for (const body of [
+          {},
+          { applied: "true" },
+          { applied: null },
+          { applied: true, extra: 1 },
+        ])
+          assert.equal((await change(body)).status, 400);
+        assert.equal(
+          (await change({ applied: true }, randomUUID())).status,
+          404,
+        );
+        assert.equal((await change({ applied: true }, "invalid")).status, 400);
+        assert.equal(
+          (await fetch(base + "/api/optimizations?status=invalid")).status,
+          400,
+        );
+        assert.equal(calls, 2);
+      },
+    );
   } finally {
     if (app) await app.close();
     await admin.query('DROP SCHEMA IF EXISTS "' + schema + '" CASCADE');

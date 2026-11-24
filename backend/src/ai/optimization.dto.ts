@@ -6,6 +6,14 @@ import {
   MaxLength,
 } from "class-validator";
 export class OptimizationDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  companyName?: string;
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  jobTitle?: string;
   @IsString()
   @Matches(/\S/, { message: "Paste the job description to continue." })
   @MaxLength(30000)

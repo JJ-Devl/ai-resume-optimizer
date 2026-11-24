@@ -3,6 +3,8 @@ import type { OptimizedResume } from "../../backend/src/ai/resume.schema";
 export interface OptimizationInput {
   resume: File;
   jobDescription: string;
+  companyName?: string;
+  jobTitle?: string;
   jobUrl?: string;
   customPrompt?: string;
 }
@@ -42,6 +44,7 @@ export type OptimizedResult = OptimizedResume & {
   usage: { inputTokens: number; outputTokens: number; reasoningTokens: number };
 };
 export interface ApplicationSummary {
+  applied: boolean;
   id: string;
   createdAt: string;
   companyName: string;
