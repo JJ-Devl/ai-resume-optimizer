@@ -44,6 +44,7 @@ export type OptimizedResult = OptimizedResume & {
   usage: { inputTokens: number; outputTokens: number; reasoningTokens: number };
 };
 export interface ApplicationSummary {
+  jobUrl: string | null;
   applied: boolean;
   id: string;
   createdAt: string;
