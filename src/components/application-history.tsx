@@ -116,11 +116,14 @@ export function ApplicationHistory() {
                       <Link href={"/history/" + item.id}>{item.jobTitle}</Link>
                     </h3>
                     <p className="history-file">{item.resumeFilename}</p>
+<<<<<<< HEAD
                     {item.jobUrl && /^https?:\/\//i.test(item.jobUrl) && (
                       <a href={item.jobUrl} target="_blank" rel="noopener noreferrer">
                         View job posting ↗
                       </a>
                     )}
+=======
+>>>>>>> origin/main
                   </div>
                   <div className="history-meta">
                     <span className="status-pill">
