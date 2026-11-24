@@ -189,7 +189,9 @@ export function SavedApplication({ id }: { id: string }) {
           <details className="resume-preview">
             <summary>Job description and posting URL</summary>
             <pre>{record.jobDescription}</pre>
-            {record.jobUrl && <p>{record.jobUrl}</p>}
+            {record.jobUrl && /^https?:\/\//i.test(record.jobUrl) && (
+              <p><a href={record.jobUrl} target="_blank" rel="noopener noreferrer">View job posting ↗</a></p>
+            )}
           </details>
           <details>
             <summary>Original extracted resume</summary>

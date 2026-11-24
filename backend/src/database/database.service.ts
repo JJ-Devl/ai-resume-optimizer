@@ -235,6 +235,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
 }
 
 const applicationSummarySelect = {
+  jobUrl: true,
   applied: true,
   id: true,
   createdAt: true,
